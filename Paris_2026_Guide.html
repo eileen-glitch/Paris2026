@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paris 2026 — My Places</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --ink: #1a1510;
+    --blush: #c4785a;
+    --gold: #b8953a;
+    --sage: #6b7c5e;
+    --muted: #7a6f63;
+    --border: #ddd5c4;
+    --white: #fdfaf5;
+    --cat-restaurant: #c4785a;
+    --cat-cafe: #6b7c5e;
+    --cat-shop: #b8953a;
+    --cat-bar: #7a5c8a;
+    --cat-hotel: #4a7a8a;
+    --cat-sight: #5a7a5a;
+    --cat-other: #888;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+    border-bottom: 3px solid var(--gold);
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    font-weight: 400;
+    letter-spacing: .04em;
+    line-height: 1.1;
+  }
+  header h1 em { color: var(--gold); font-style: italic; }
+  header p { margin-top: .5rem; color: #b0a898; font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; }
+
+  /* NAV TABS */
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    background: var(--white);
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .9rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 1rem 2rem;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all .2s;
+  }
+  nav button.active, nav button:hover {
+    color: var(--blush);
+    border-bottom-color: var(--blush);
+  }
+
+  /* MAIN */
+  .panel { display: none; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  /* ARR SELECTOR */
+  .arr-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: 2rem;
+  }
+  .arr-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem;
+    font-weight: 500;
+    padding: .45rem 1rem;
+    border: 2px solid var(--border);
+    background: var(--white);
+    color: var(--muted);
+    border-radius: 2rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .arr-btn.active, .arr-btn:hover {
+    background: var(--ink);
+    color: var(--cream);
+    border-color: var(--ink);
+  }
+
+  /* TABLE */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 400;
+    margin-bottom: 1.2rem;
+    padding-bottom: .5rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--ink);
+  }
+  .section-title span {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: .75rem;
+    letter-spacing: .04em;
+  }
+  .cat-group { margin-bottom: 2rem; }
+  .cat-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: .3rem .8rem;
+    border-radius: 2rem;
+    margin-bottom: .8rem;
+    color: white;
+  }
+  .cat-Restaurant { background: var(--cat-restaurant); }
+  .cat-Café { background: var(--cat-cafe); }
+  .cat-Shop { background: var(--cat-shop); }
+  .cat-Bar { background: var(--cat-bar); }
+  .cat-Hotel { background: var(--cat-hotel); }
+  .cat-Sight { background: var(--cat-sight); }
+  .cat-Other { background: var(--cat-other); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: .5rem; }
+  thead tr { background: var(--ink); color: var(--cream); }
+  thead th { padding: .7rem 1rem; text-align: left; font-size: .78rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f0ebe0; }
+  tbody td { padding: .7rem 1rem; font-size: .9rem; vertical-align: top; }
+  td.name { font-weight: 500; color: var(--ink); }
+  td.note { color: var(--muted); font-size: .85rem; font-style: italic; }
+  td.addr { color: var(--muted); font-size: .82rem; }
+
+  /* MAPS */
+  .map-intro { color: var(--muted); margin-bottom: 1.5rem; font-size: .95rem; line-height: 1.6; }
+  .map-wrap { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.12); margin-bottom: 2rem; }
+  .leaflet-map { height: 420px; width: 100%; }
+  .place-list-under { margin-top: 1rem; }
+  .place-pill {
+    display: inline-block;
+    font-size: .8rem;
+    padding: .25rem .7rem;
+    border-radius: 2rem;
+    margin: .2rem;
+    color: white;
+    cursor: default;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: .82rem;
+  }
+  .legend-item { display: flex; align-items: center; gap: .4rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 2rem; }
+    nav button { padding: .75rem 1rem; font-size: .8rem; }
+    .panel { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Paris <em>2026</em></h1>
+  <p>Curated Places — Organized by Arrondissement</p>
+</header>
+
+<nav>
+  <button class="active" onclick="showPanel('table', this)">📋 Table View</button>
+  <button onclick="showPanel('maps', this)">🗺️ Maps by Arrondissement</button>
+</nav>
+
+<!-- TABLE PANEL -->
+<div class="panel active" id="panel-table">
+  <div class="arr-nav" id="table-arr-nav"></div>
+  <div id="table-content"></div>
+</div>
+
+<!-- MAPS PANEL -->
+<div class="panel" id="panel-maps">
+  <p class="map-intro">Select an arrondissement below to see an interactive map of your saved places. Tap any marker for details. Maps use OpenStreetMap — works offline if you save the page.</p>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cat-restaurant)"></div> Restaurant</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cat-cafe)"></div> Café / Bakery</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cat-shop)"></div> Shop</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cat-bar)"></div> Bar</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cat-hotel)"></div> Hotel</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cat-sight)"></div> Sight</div>
+  </div>
+  <div class="arr-nav" id="map-arr-nav"></div>
+  <div id="map-content"></div>
+</div>
+
+<script>
+const DATA = {"1": {"Bar": [{"Name": "Bar Hemingway", "Address": "38 Rue Cambon, 75001 Paris, France", "Type": "Bar - hEmingway went here"}], "Restaurant": [{"Name": "Au Pied du Cochon", "Address": "6 Rue Coqu\u0069ll\u00e8re, 75001 Paris, France", "Type": "Restaurant"}, {"Name": "Kong", "Address": "1 Rue du Pont Neuf, 75001 Paris, France", "Type": "Restaurant - Asian, under glass ceiling"}, {"Name": "Maslow", "Address": "14 Quai de la M\u00e9gisserie, 75001 Paris, France", "Type": "Restaurant - vegetarian"}], "Shop": [{"Name": "Astier de Villatte", "Address": "173 Rue Saint-Honor\u00e9, 75001 Paris, France", "Type": "Shop - Ceramics"}, {"Name": "E. Dehillerin", "Address": "18-20 Rue Coqu\u0069ll\u00e8re, 75001 Paris, France", "Type": "Shop - Kitchen supplies, historic"}, {"Name": "La Distillerie de l'arbre sec", "Address": "52 Rue de l'Arbre Sec, 75001 Paris, France", "Type": "Distillery - gin making"}, {"Name": "Samaritaine", "Address": "9 R. de la Monnaie, 75001 Paris, France", "Type": "Shops"}, {"Name": "Kilian Paris", "Address": "20 Rue Cambon, 75001 Paris, France", "Type": "Shop - perfume"}], "Sight": [{"Name": "Chatelet les Halles", "Address": "75001 Paris, France", "Type": "Train Station - RER A"}, {"Name": "Eglise Saint-Eustache", "Address": "2 Imp. Saint-Eustache, 75001 Paris, France", "Type": "Church"}, {"Name": "Sainte-Chapelle", "Address": "10 Bd du Palais, 75001 Paris, France", "Type": "Church"}, {"Name": "Musee de l'orangerie", "Address": "Jardin des Tuileries, 75001 Paris, France", "Type": "Museum"}]}, "2": {"Bar": [{"Name": "Harry's New York Bar", "Address": "5 Rue Daunou, 75002 Paris, France", "Type": "Bar - historic"}], "Caf\u00e9 / Bakery": [{"Name": "Madame Madame", "Address": "28 Rue d'Aboukir, 75002 Paris, France", "Type": "Caf\u00e9 - coffee, near Boneshaker"}, {"Name": "Boneshaker donuts", "Address": "86 Rue d'Aboukir, 75002 Paris, France", "Type": "Caf\u00e9 - donuts, vegan"}, {"Name": "Stohrer", "Address": "51 Rue Montorgueil, 75002 Paris, France", "Type": "Patisserie - oldest in Paris, cool street in Paris"}], "Restaurant": [{"Name": "La Grille Montorgueil", "Address": "50 Rue Montorgueil, 75002 Paris, France", "Type": "Restaurant - croque monsieur, cool street"}, {"Name": "Le Petit Vendome", "Address": "8 Rue des Capucines, 75002 Paris, France", "Type": "Restaurant - best jambon et beurre"}], "Shop": [{"Name": "Boissier", "Address": "64 Gal Vivienne, 75002 Paris, France", "Type": "Shop - French candy, Galerie Vivienne"}, {"Name": "Galerie Vivienne", "Address": "4 Rue des Petits Champs, 75002 Paris, France", "Type": "Shops"}]}, "3": {"Bar": [{"Name": "The Cambridge Public House", "Address": "8 Rue de Poitou, 75003 Paris, France", "Type": "One of the best bars in Paris"}], "Caf\u00e9 / Bakery": [{"Name": "Boot Caf\u00e9", "Address": "19 Rue du Pont aux Choux, 75003 Paris, France", "Type": "Caf\u00e9 - best latte in Paris"}, {"Name": "Kitchen", "Address": "74 Rue des Gravilliers, 75003 Paris, France", "Type": "Caf\u00e9 - Vegan pancakes, coolest street in Paris"}, {"Name": "Hanami Tea Tim", "Address": "50 Rue des Gravilliers, 75003 Paris, France", "Type": "Caf\u00e9 - Cute desserts"}, {"Name": "Fika", "Address": "11 Rue Payenne, 75003 Paris, France", "Type": "Caf\u00e9 - Scandinavian"}], "Restaurant": [{"Name": "Chez Janou", "Address": "2 Rue Roger Verlomme, 75003 Paris, France", "Type": "Restaurant"}, {"Name": "Dumbo", "Address": "6 Rue de Poitou, 75003 Paris, France", "Type": "Restaurant - Smashburgers"}, {"Name": "Auberge Nicolas Flamel", "Address": "51 Rue de Montmorency, 75003 Paris, France", "Type": "Restaurant - historic"}, {"Name": "Bistrot Instinct", "Address": "19 Rue de Picardie, 75003 Paris, France", "Type": "Restaurant - highly rated!"}]}, "4": {"Caf\u00e9 / Bakery": [{"Name": "Noir", "Address": "63 Rue Saint-Louis en l'\u00cele, 75004 Paris, France", "Type": "Caf\u00e9"}, {"Name": "Le Reveil Bastille", "Address": "29 Bd Henri IV, 75004 Paris, France", "Type": "Caf\u00e9"}, {"Name": "Mariage Freres", "Address": "30 Rue du Bourg Tibourg, 75004 Paris, France", "Type": "Caf\u00e9 - Tea"}, {"Name": "Berthillon", "Address": "31 Rue Saint-Louis en l'\u00cele, 75004 Paris, France", "Type": "Caf\u00e9 - ice cream"}], "Hotel": [{"Name": "Hotel du jeu de paume", "Address": "54 Rue Saint-Louis en l'\u00cele, 75004 Paris, France", "Type": "Hotel - where we're staying"}], "Restaurant": [{"Name": "La Baguette du Relais", "Address": "10 Rue des Archives, 75004 Paris, France", "Type": "Restaurant - sandwiches with fries"}, {"Name": "La Reserve du Terroir", "Address": "13 R. Quincampoix, 75004 Paris, France", "Type": "Restaurant - Aligot"}, {"Name": "Les Fous de l'Ile", "Address": "33 Rue des Deux Ponts, 75004 Paris, France", "Type": "Restaurant - Aligot"}, {"Name": "Bofinger", "Address": "5-7 Rue de la Bastille, 75004 Paris, France", "Type": "Restaurant - Alsatian French"}, {"Name": "Le Saint Regis", "Address": "6 Rue Jean du Bellay, 75004 Paris, France", "Type": "Restaurant - one of our favorites"}], "Shop": [{"Name": "Ricola", "Address": "4 Rue Pav\u00e9e, 75004 Paris, France", "Type": "Shop - Ricolas"}, {"Name": "Melodies Graphiques", "Address": "10 Rue du Pont Louis-Philippe, 75004 Paris, France", "Type": "Shop - Paper"}]}, "5": {"Caf\u00e9 / Bakery": [{"Name": "Saint Pearl Sorbonne", "Address": "42 Rue Saint-Jacques, 75005 Paris, France", "Type": "Caf\u00e9 - coffee"}], "Restaurant": [{"Name": "La Petite Bouclerie", "Address": "33 Rue de la Harpe, 75005 Paris, France", "Type": "Restaurant - Crepes and Classics"}, {"Name": "Le Vieux Bistrot Paris", "Address": "54 Rue Mouffetard, 75005 Paris, France", "Type": "Restaurant - Classic French"}, {"Name": "Bistrot des lettres", "Address": "52 Bd Saint-Germain, 75005 Paris, France", "Type": "Restaurant - classic french"}], "Shop": [{"Name": "Sorbonne", "Address": "10 Rue de la Sorbonne, 75005 Paris, France", "Type": "Shop - University"}], "Sight": [{"Name": "Curie Museum", "Address": "1 Rue Pierre et Marie Curie, 75005 Paris, France", "Type": "Museum"}]}, "6": {"Bar": [{"Name": "Josephine", "Address": "45 Bd Raspail, 75006 Paris, France", "Type": "Bar"}], "Caf\u00e9 / Bakery": [{"Name": "Dengo", "Address": "58 Rue Bonaparte, 75006 Paris, France", "Type": "Caf\u00e9 - hot chocolate"}, {"Name": "Caf\u00e9 de Flore", "Address": "172 Bd Saint-Germain, 75006 Paris, France", "Type": "Caf\u00e9 - Hemingway, touristy"}], "Other": [{"Name": "Pierre Herme", "Address": "72 Rue Bonaparte, 75006 Paris, France", "Type": "Chocolate"}], "Restaurant": [{"Name": "Junk", "Address": "4 Rue de l'Ancienne Com\u00e9die, 75006 Paris, France", "Type": "Restaurant - Smashburgers"}, {"Name": "Brasserie Lipp", "Address": "151 Bd Saint-Germain, 75006 Paris, France", "Type": "Restaurant - Classic French"}, {"Name": "Le Procope", "Address": "13 Rue de l'Ancienne Com\u00e9die, 75006 Paris, France", "Type": "Restaurant - classic, historic"}, {"Name": "La Jacobine", "Address": "59-61 Rue Saint-Andr\u00e9 des Arts, 75006 Paris, France", "Type": "Restaurant - classic French"}], "Shop": [{"Name": "Marin Montagut", "Address": "48 Rue Madame, 75006 Paris, France", "Type": "Shop"}, {"Name": "A la Mere de Famille", "Address": "70 Rue Bonaparte, 75006 Paris, France", "Type": "Shop - historic chocolate and confectionery"}], "Sight": [{"Name": "Church of Saint-Germain des Pres", "Address": "3 Pl. Saint-Germain des Pr\u00e9s, 75006 Paris, France", "Type": "Church - site of Descartes tomb"}, {"Name": "Sorbonne Universite", "Address": "15-21 Rue de l'\u00c9cole de M\u00e9decine, 75006 Paris, France", "Type": "University"}]}, "7": {"Caf\u00e9 / Bakery": [{"Name": "Coutume", "Address": "47 Rue de Babylone, 75007 Paris, France", "Type": "Caf\u00e9 - Coffee"}, {"Name": "Saint Pearl Saint-Germain", "Address": "38 Rue des Saints-P\u00e8res, 75007 Paris, France", "Type": "Caf\u00e9 - coffee"}, {"Name": "La Fontaine de Mars", "Address": "129 Rue Saint-Dominique, 75007 Paris, France", "Type": "Restaurant - steak frites"}, {"Name": "Caf\u00e9 Pierre Herme", "Address": "53 - 57 Rue de Grenelle, 75007 Paris, France", "Type": "Caf\u00e9 - chocolates"}], "Restaurant": [{"Name": "Via Del Campo", "Address": "22 Rue du Champ de Mars, 75007 Paris, France", "Type": "Restaurant"}, {"Name": "Vendemiaire", "Address": "54 Bd de la Tour-Maubourg, 75007 Paris, France", "Type": "Restaurant - croque monsieur"}, {"Name": "Les Antiquaires", "Address": "13 Rue du Bac, 75007 Paris, France", "Type": "Restaurant - Classic french"}, {"Name": "Le Voltaire", "Address": "27 Quai Voltaire, 75007 Paris, France", "Type": "Restaurant - classic french"}], "Shop": [{"Name": "Boissier", "Address": "77 Rue du Bac, 75007 Paris, France", "Type": "Shop - French candy"}, {"Name": "Le Bon Marche", "Address": "24 Rue de S\u00e8vres, 75007 Paris, France", "Type": "Shop"}, {"Name": "A la Mere de Famille", "Address": "35 Rue Cler, 75007 Paris, France", "Type": "Shop - historic chocolate and confectionery"}, {"Name": "Bookbinders Design", "Address": "130 Rue du Bac, 75007 Paris, France", "Type": "Shop - paper and pens"}, {"Name": "La Grande Epicerie", "Address": "38 Rue de S\u00e8vres, 75007 Paris, France", "Type": "Shops"}]}, "8": {"Caf\u00e9 / Bakery": [{"Name": "La Duree", "Address": "75 Av. des Champs-\u00c9lys\u00e9es, 75008 Paris, France", "Type": "Caf\u00e9 - macarons"}], "Hotel": [{"Name": "Hotel George V", "Address": "31 Av. George V, 75008 Paris, France", "Type": "Hotel - Bar"}, {"Name": "Hotel de Crillon", "Address": "10 Pl. de la Concorde, 75008 Paris, France", "Type": "Hotel - Bar"}], "Restaurant": [{"Name": "Francois Felxi", "Address": "9 Rue Boissy d'Anglas, 75008 Paris, France", "Type": "Restaurant"}, {"Name": "Miss Ko", "Address": "49-51 Av. George V, 75008 Paris, France", "Type": "Restaurant - Asian, sushi"}, {"Name": "Le Chat Blanc", "Address": "61 Av. Franklin Delano Roosevelt, 75008 Paris, France", "Type": "Restaurant - one of our favorites"}], "Shop": [{"Name": "Pierre Herme", "Address": "86 Av. des Champs-\u00c9lys\u00e9es, 75008 Paris, France", "Type": "Shop - chocolate"}, {"Name": "La Maison du Chocolate Saint Honore", "Address": "225 Rue du Faubourg Saint-Honor\u00e9, 75008 Paris, France", "Type": "Shop - chocolate"}]}, "9": {"Caf\u00e9 / Bakery": [{"Name": "Bar Parche Printemps", "Address": "70 Bd Haussmann, 75009 Paris, France", "Type": "Caf\u00e9 - outdoor terrace at Printemps"}, {"Name": "Long&Tee", "Address": "39 Rue La Fayette, 75009 Paris, France", "Type": "Caf\u00e9 - cute desserts"}, {"Name": "Caf\u00e9 de la Paix", "Address": "5 Pl. de l'Op\u00e9ra, 75009 Paris, France", "Type": "Caf\u00e9"}], "Shop": [{"Name": "Galeries Lafayette Hausmann", "Address": "40 Bd Haussmann, 75009 Paris, France", "Type": "Shops"}]}, "10": {"Caf\u00e9 / Bakery": [{"Name": "La Chocolaterie William Artigue", "Address": "30 Rue Yves Toudic, 75010 Paris, France", "Type": "Caf\u00e9 - best hot chocolate in Paris"}, {"Name": "Du Pain et des Idees", "Address": "34 Rue Yves Toudic, 75010 Paris, France", "Type": "Boulangerie"}], "Restaurant": [{"Name": "Bouillon Julien", "Address": "16 Rue du Faubourg Saint-Denis, 75010 Paris, France", "Type": "Restaurant - art nouveau d\u00e9cor"}]}, "11": {"Caf\u00e9 / Bakery": [{"Name": "The French Bastards", "Address": "61 Rue Oberkampf, 75011 Paris, France", "Type": "Caf\u00e9"}], "Restaurant": [{"Name": "Oobatx", "Address": "4bis Av. Jean Aicard, 75011 Paris, France", "Type": "Restaurant - best pizza"}], "Shop": [{"Name": "Flying Tiger", "Address": "35-37 Rue du Faubourg Saint-Antoine, 75011 Paris, France", "Type": "Shop - Cool stuff"}]}, "14": {"Restaurant": [{"Name": "Le Plomb du Cantal", "Address": "3 Rue de la Ga\u00edt\u00e9, 75014 Paris, France", "Type": "Restaurant - Aligot, near Marin Montagut"}]}, "16": {"Restaurant": [{"Name": "Sogno", "Address": "42 Rue de l'Amiral Hamelin, 75016 Paris, France", "Type": "Restaurant"}, {"Name": "Sgabeti", "Address": "13-15 Rue des Sablons, 75016 Paris, France", "Type": "Restaurant - Italian"}]}, "17": {"Restaurant": [{"Name": "Chez Georges", "Address": "273 Bd Pereire, 75017 Paris, France", "Type": "Restaurant"}, {"Name": "Restaurant Brigitte", "Address": "16 Av. de Villiers, 75017 Paris, France", "Type": "Restaurant"}]}, "18": {"Hotel": [{"Name": "Hotel Particulier", "Address": "23 Av. Junot, 75018 Paris, France", "Type": "Hotel"}], "Restaurant": [{"Name": "Le Refuge des Fondus", "Address": "17 Rue des Trois Fr\u00e8res, 75018 Paris, France", "Type": "Restaurant - wine in baby bottles"}]}};
+
+const ARR_NAMES = {
+  "1":"1er — Louvre / Châtelet","2":"2e — Bourse / Montorgueil","3":"3e — Marais (Nord)","4":"4e — Île de la Cité / Marais (Sud)",
+  "5":"5e — Latin Quarter","6":"6e — Saint-Germain","7":"7e — Invalides / Eiffel Tower","8":"8e — Champs-Élysées",
+  "9":"9e — Opéra / Grands Boulevards","10":"10e — Canal Saint-Martin","11":"11e — Bastille / Oberkampf",
+  "14":"14e — Montparnasse","16":"16e — Trocadéro","17":"17e — Batignolles","18":"18e — Montmartre"
+};
+
+// Approximate geocoordinates per address (Nominatim-free, baked in)
+const GEO = {
+  "38 Rue Cambon, 75001":[48.8655,2.3292],
+  "6 Rue Coquillière, 75001":[48.8632,2.3467],"6 Rue Coqu\u0069ll\u00e8re, 75001":[48.8632,2.3467],
+  "1 Rue du Pont Neuf, 75001":[48.8597,2.3416],
+  "14 Quai de la Mégisserie, 75001":[48.8598,2.3468],
+  "173 Rue Saint-Honoré, 75001":[48.8644,2.3348],
+  "18-20 Rue Coquillière, 75001":[48.8632,2.3465],
+  "52 Rue de l'Arbre Sec, 75001":[48.8611,2.3441],
+  "9 R. de la Monnaie, 75001":[48.8603,2.3436],
+  "20 Rue Cambon, 75001":[48.8657,2.3285],
+  "75001 Paris, France":[48.8606,2.3467],
+  "2 Imp. Saint-Eustache, 75001":[48.8627,2.3476],
+  "10 Bd du Palais, 75001":[48.8554,2.3472],
+  "Jardin des Tuileries, 75001":[48.8634,2.3277],
+  "5 Rue Daunou, 75002":[48.8693,2.3333],
+  "28 Rue d'Aboukir, 75002":[48.8672,2.3497],
+  "86 Rue d'Aboukir, 75002":[48.8674,2.3519],
+  "51 Rue Montorgueil, 75002":[48.8637,2.3486],
+  "50 Rue Montorgueil, 75002":[48.8638,2.3484],
+  "8 Rue des Capucines, 75002":[48.8699,2.3332],
+  "64 Gal Vivienne, 75002":[48.8665,2.3384],
+  "4 Rue des Petits Champs, 75002":[48.8660,2.3390],
+  "8 Rue de Poitou, 75003":[48.8618,2.3615],
+  "19 Rue du Pont aux Choux, 75003":[48.8590,2.3617],
+  "74 Rue des Gravilliers, 75003":[48.8624,2.3531],
+  "50 Rue des Gravilliers, 75003":[48.8624,2.3521],
+  "11 Rue Payenne, 75003":[48.8585,2.3588],
+  "2 Rue Roger Verlomme, 75003":[48.8567,2.3623],
+  "6 Rue de Poitou, 75003":[48.8618,2.3613],
+  "51 Rue de Montmorency, 75003":[48.8624,2.3536],
+  "19 Rue de Picardie, 75003":[48.8622,2.3589],
+  "63 Rue Saint-Louis en l'Île, 75004":[48.8513,2.3552],
+  "29 Bd Henri IV, 75004":[48.8528,2.3594],
+  "30 Rue du Bourg Tibourg, 75004":[48.8558,2.3535],
+  "31 Rue Saint-Louis en l'Île, 75004":[48.8513,2.3547],
+  "54 Rue Saint-Louis en l'Île, 75004":[48.8514,2.3560],
+  "10 Rue des Archives, 75004":[48.8562,2.3531],
+  "13 R. Quincampoix, 75004":[48.8593,2.3494],
+  "33 Rue des Deux Ponts, 75004":[48.8516,2.3553],
+  "5-7 Rue de la Bastille, 75004":[48.8534,2.3688],
+  "6 Rue Jean du Bellay, 75004":[48.8520,2.3535],
+  "4 Rue Pavée, 75004":[48.8556,2.3561],
+  "10 Rue du Pont Louis-Philippe, 75004":[48.8533,2.3524],
+  "42 Rue Saint-Jacques, 75005":[48.8505,2.3466],
+  "33 Rue de la Harpe, 75005":[48.8521,2.3453],
+  "54 Rue Mouffetard, 75005":[48.8450,2.3503],
+  "52 Bd Saint-Germain, 75005":[48.8508,2.3479],
+  "10 Rue de la Sorbonne, 75005":[48.8499,2.3433],
+  "1 Rue Pierre et Marie Curie, 75005":[48.8469,2.3445],
+  "45 Bd Raspail, 75006":[48.8499,2.3272],
+  "58 Rue Bonaparte, 75006":[48.8519,2.3340],
+  "172 Bd Saint-Germain, 75006":[48.8543,2.3327],
+  "72 Rue Bonaparte, 75006":[48.8510,2.3336],
+  "4 Rue de l'Ancienne Comédie, 75006":[48.8530,2.3400],
+  "151 Bd Saint-Germain, 75006":[48.8540,2.3316],
+  "13 Rue de l'Ancienne Comédie, 75006":[48.8530,2.3400],
+  "59-61 Rue Saint-André des Arts, 75006":[48.8534,2.3410],
+  "48 Rue Madame, 75006":[48.8479,2.3316],
+  "70 Rue Bonaparte, 75006":[48.8508,2.3333],
+  "3 Pl. Saint-Germain des Prés, 75006":[48.8540,2.3329],
+  "15-21 Rue de l'École de Médecine, 75006":[48.8523,2.3419],
+  "47 Rue de Babylone, 75007":[48.8536,2.3165],
+  "38 Rue des Saints-Pères, 75007":[48.8548,2.3295],
+  "129 Rue Saint-Dominique, 75007":[48.8574,2.3044],
+  "53 - 57 Rue de Grenelle, 75007":[48.8541,2.3147],
+  "22 Rue du Champ de Mars, 75007":[48.8579,2.3010],
+  "54 Bd de la Tour-Maubourg, 75007":[48.8567,2.3137],
+  "13 Rue du Bac, 75007":[48.8570,2.3277],
+  "27 Quai Voltaire, 75007":[48.8583,2.3318],
+  "77 Rue du Bac, 75007":[48.8548,2.3249],
+  "24 Rue de Sèvres, 75007":[48.8530,2.3178],
+  "35 Rue Cler, 75007":[48.8586,2.3044],
+  "130 Rue du Bac, 75007":[48.8513,2.3234],
+  "38 Rue de Sèvres, 75007":[48.8524,2.3172],
+  "75 Av. des Champs-Élysées, 75008":[48.8723,2.3047],
+  "31 Av. George V, 75008":[48.8722,2.3027],
+  "10 Pl. de la Concorde, 75008":[48.8656,2.3212],
+  "9 Rue Boissy d'Anglas, 75008":[48.8680,2.3196],
+  "49-51 Av. George V, 75008":[48.8718,2.3033],
+  "61 Av. Franklin Delano Roosevelt, 75008":[48.8676,2.3094],
+  "86 Av. des Champs-Élysées, 75008":[48.8726,2.3052],
+  "225 Rue du Faubourg Saint-Honoré, 75008":[48.8756,2.2969],
+  "70 Bd Haussmann, 75009":[48.8748,2.3313],
+  "39 Rue La Fayette, 75009":[48.8748,2.3440],
+  "5 Pl. de l'Opéra, 75009":[48.8720,2.3316],
+  "40 Bd Haussmann, 75009":[48.8750,2.3328],
+  "30 Rue Yves Toudic, 75010":[48.8699,2.3622],
+  "34 Rue Yves Toudic, 75010":[48.8700,2.3625],
+  "16 Rue du Faubourg Saint-Denis, 75010":[48.8737,2.3556],
+  "61 Rue Oberkampf, 75011":[48.8655,2.3774],
+  "4bis Av. Jean Aicard, 75011":[48.8659,2.3783],
+  "35-37 Rue du Faubourg Saint-Antoine, 75011":[48.8533,2.3713],
+  "3 Rue de la Gaité, 75014":[48.8380,2.3222],
+  "42 Rue de l'Amiral Hamelin, 75016":[48.8703,2.2940],
+  "13-15 Rue des Sablons, 75016":[48.8684,2.2797],
+  "273 Bd Pereire, 75017":[48.8846,2.2998],
+  "16 Av. de Villiers, 75017":[48.8822,2.3095],
+  "23 Av. Junot, 75018":[48.8882,2.3384],
+  "17 Rue des Trois Frères, 75018":[48.8853,2.3413],
+  // Extras
+  "1 Av. du Président Wilson, 75116":[48.8634,2.2997],
+  "18 Rue des Belles Feuilles, 75116":[48.8709,2.2832],
+  "58 Av. Paul Doumer, 75116":[48.8627,2.2790],
+  "8 Pl. du Trocadéro et du 11 Novembre, 75116":[48.8634,2.2886],
+  "116 Av. Kléber, 75116":[48.8675,2.2909]
+};
+
+function getColor(cat) {
+  const map = {
+    'Restaurant':'#c4785a','Café / Bakery':'#6b7c5e','Shop':'#b8953a',
+    'Bar':'#7a5c8a','Hotel':'#4a7a8a','Sight':'#5a7a5a','Other':'#888'
+  };
+  return map[cat] || '#888';
+}
+function getCatClass(cat) { return 'cat-' + cat.split('/')[0].trim(); }
+
+function cleanNote(type) {
+  return type.replace(/^(Restaurant|Café|Cafe|Caf\u00e9|Shop|Bar|Hotel|Boulangerie|Patisserie|Distillery)\s*[-–]\s*/i,'').replace(/^(Shops|Restaurant|Café|Shop|Bar|Hotel)$/i,'').trim();
+}
+
+function lookupGeo(addr) {
+  const postcode = addr.match(/750(\d\d)/);
+  if (!postcode) return null;
+  const arr = postcode[0];
+  for (const key in GEO) {
+    if (addr.includes(key) || key.startsWith(addr.split(',')[0])) return GEO[key];
+  }
+  // Partial match on street
+  const street = addr.split(',')[0].trim();
+  for (const key in GEO) {
+    if (key.includes(street) || street.includes(key.split(',')[0])) return GEO[key];
+  }
+  // Fallback: use post code center
+  const arrCenters = {
+    '75001':[48.861,2.347],'75002':[48.866,2.347],'75003':[48.861,2.358],
+    '75004':[48.853,2.352],'75005':[48.847,2.347],'75006':[48.850,2.335],
+    '75007':[48.856,2.310],'75008':[48.874,2.308],'75009':[48.876,2.338],
+    '75010':[48.870,2.360],'75011':[48.858,2.377],'75014':[48.833,2.326],
+    '75016':[48.863,2.275],'75017':[48.884,2.307],'75018':[48.890,2.344]
+  };
+  return arrCenters[arr] || null;
+}
+
+// BUILD TABLE
+const arrList = Object.keys(DATA);
+const tableNav = document.getElementById('table-arr-nav');
+const tableContent = document.getElementById('table-content');
+
+arrList.forEach((arr, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'arr-btn' + (i === 0 ? ' active' : '');
+  btn.textContent = arr + 'e';
+  btn.onclick = () => showArr(arr, btn, 'table');
+  tableNav.appendChild(btn);
+});
+
+function showArr(arr, btn, mode) {
+  if (mode === 'table') {
+    document.querySelectorAll('#table-arr-nav .arr-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable(arr);
+  } else {
+    document.querySelectorAll('#map-arr-nav .arr-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderMap(arr);
+  }
+}
+
+function renderTable(arr) {
+  const cats = DATA[arr];
+  const total = Object.values(cats).flat().length;
+  let html = `<div class="section-title">
+    <em style="font-family:'Playfair Display',serif">${ARR_NAMES[arr]}</em>
+    <span>${total} place${total!==1?'s':''}</span>
+  </div>`;
+  for (const cat in cats) {
+    const items = cats[cat];
+    const cls = getCatClass(cat);
+    html += `<div class="cat-group">
+      <div class="cat-label ${cls}">${cat}</div>
+      <table>
+        <thead><tr><th>Name</th><th>Notes</th><th>Address</th></tr></thead>
+        <tbody>`;
+    items.forEach(p => {
+      const note = cleanNote(p.Type);
+      html += `<tr>
+        <td class="name">${p.Name}</td>
+        <td class="note">${note}</td>
+        <td class="addr">${p.Address.replace(', France','')}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+  tableContent.innerHTML = html;
+}
+renderTable(arrList[0]);
+
+// BUILD MAPS
+const mapNav = document.getElementById('map-arr-nav');
+const mapContent = document.getElementById('map-content');
+let currentMap = null;
+
+arrList.forEach((arr, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'arr-btn' + (i === 0 ? ' active' : '');
+  btn.textContent = arr + 'e';
+  btn.onclick = () => showArr(arr, btn, 'map');
+  mapNav.appendChild(btn);
+});
+
+function renderMap(arr) {
+  if (currentMap) { currentMap.remove(); currentMap = null; }
+  const cats = DATA[arr];
+  const arrCenters = {"1":[48.861,2.347],"2":[48.866,2.347],"3":[48.861,2.358],"4":[48.853,2.352],"5":[48.847,2.347],"6":[48.850,2.335],"7":[48.856,2.310],"8":[48.874,2.308],"9":[48.876,2.338],"10":[48.870,2.360],"11":[48.858,2.377],"14":[48.833,2.326],"16":[48.863,2.275],"17":[48.884,2.307],"18":[48.890,2.344]};
+
+  // Pre-collect markers and pills before touching the DOM
+  const markerData = [];
+  let pillsHtml = '<div class="place-list-under">';
+  for (const cat in cats) {
+    const color = getColor(cat);
+    cats[cat].forEach(p => {
+      const geo = lookupGeo(p.Address);
+      const note = cleanNote(p.Type);
+      markerData.push({ geo, color, cat, note, name: p.Name, addr: p.Address });
+      pillsHtml += `<span class="place-pill" style="background:${color}">${p.Name}</span>`;
+    });
+  }
+  pillsHtml += '</div>';
+
+  // Inject all HTML at once including the map container and pills
+  mapContent.innerHTML = `
+    <div class="section-title" style="margin-bottom:1rem">
+      <em style="font-family:'Playfair Display',serif">${ARR_NAMES[arr]}</em>
+    </div>
+    <div class="map-wrap"><div id="leaflet-map" class="leaflet-map"></div></div>
+    ${pillsHtml}`;
+
+  // Defer Leaflet init so browser has time to lay out and size the div
+  setTimeout(() => {
+    const mapEl = document.getElementById('leaflet-map');
+    if (!mapEl) return;
+
+    const map = L.map(mapEl, { preferCanvas: true });
+    currentMap = map;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    const bounds = [];
+    markerData.forEach(({ geo, color, cat, note, name, addr }) => {
+      if (!geo) return;
+      bounds.push(geo);
+      const icon = L.divIcon({
+        html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+        className: '', iconSize: [14,14], iconAnchor: [7,7]
+      });
+      L.marker(geo, { icon }).addTo(map)
+        .bindPopup(`<strong>${name}</strong><br><em style="color:${color};font-size:.82em">${cat}</em>${note ? '<br>' + note : ''}<br><small style="color:#888">${addr.replace(', France','')}</small>`, { maxWidth: 220 });
+    });
+
+    if (bounds.length) {
+      map.fitBounds(bounds, { padding: [40, 40] });
+    } else {
+      map.setView(arrCenters[arr] || [48.856, 2.347], 15);
+    }
+    map.invalidateSize();
+  }, 50);
+}
+// Don't render map on load — panel is hidden and Leaflet can't size correctly
+// Map renders on first switch to the Maps tab
+
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'maps') {
+    // Always re-render so Leaflet sizes correctly after panel becomes visible
+    const activeArr = document.querySelector('#map-arr-nav .arr-btn.active');
+    const arr = activeArr ? activeArr.textContent.replace(/e$/, '') : arrList[0];
+    renderMap(arr);
+  }
+}
+</script>
+</body>
+</html>
